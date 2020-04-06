@@ -1,0 +1,94 @@
+# -- coding: utf-8 --
+#importamos los paquetes necesarios a utilizar
+from picamera.array import PiRGBArray
+from picamera import PiCamera
+import cv2
+import numpy as np
+#importamos las librerias para conectar con el arduino Uno
+import serial
+arduino = serial.Serial('/dev/ttyACM0',9600, timeout = 1)
+
+#arduino.write(str.encode('b')), entraga al arduino por serial la letra B, que es leida para realizar una accion.
+ 
+#inicializa la camara y toma una referencia para la capturadora de la camara
+camara = PiCamera()
+#tamaño de la pantalla
+imagen_ancho = 640
+imagen_alto = 480
+camara.resolution = (imagen_ancho, imagen_alto)
+camara.framerate = 32
+areaCaptura = PiRGBArray(camara, size=(imagen_ancho, imagen_alto))
+#centra la imagen 
+centrar_imagen_x = imagen_ancho / 2
+centrar_imagen_y = imagen_alto / 2
+area_minima = 250
+area_maxima = 100000 
+matiz = 40
+ 
+color_minimo = np.array([matiz-10,100,100])
+color_maximo = np.array([matiz+10, 155, 255])
+#mientras este activa la camara, realiza los ciclos
+for frame in camara.capture_continuous(areaCaptura, format="bgr", use_video_port=True):
+    image = frame.array
+    #hsv es el modelo de colores [Matriz de colores, saturacion, brillo]
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+ 
+    mascara_colores = cv2.inRange(hsv, color_minimo, color_maximo)
+    
+    #obtiene los contronoss, imagen y la gerarqu
+    image2, contronos, jerarquia = cv2.findContours(mascara_colores, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+    #se declaran los elementos de base para la pelota y la captura del elemento
+    area_objeto = 0
+    objeto_pos_x = 0
+    objeto_pos_y= 0
+    
+    #si esta entre los contornos va a ver si el objeto es menor al area solicitada. y va a centrar la posicion del robot para comparar si usar el brazo
+    
+    for contorno in contronos:
+        x, y, ancho,alto = cv2.boundingRect(contorno)
+        area_encontrada = ancho *alto
+        x_centrada = x + (ancho / 2)
+        y_centrada = y + (height / 2)
+        if area_objeto < area_encontrada:
+            area_objeto = area_encontrada
+            objeto_pos_x = x_centrada
+            objeto_pos_y= y_centrada
+            print("Usar brazo")
+            arduino.write(str.encode('b'))
+            
+    #si el area es menor a 0 busca la posicion de la pelota
+    if area_objeto > 0:
+        posicion_pingpong = [area_objeto, objeto_pos_x, objecto_pos_y]
+    #si no, no realiza ni una actividad... para mantener la distancia
+    else:
+        posicion_pingpong = None
+    
+    if posicion_pingpong:
+        if (posicion_pingpong[0] > area_minima) and (posicion_pingpong[0] < area_maxima):
+            #si el objeto esta mas a la derecha de la posicion central y el ancho de la imagen se mueve a la derecha
+            if posicion_pingpong[1] > (centrar_imagen_x + (imagen_ancho/3)):
+                print("Gira derecha")
+                arduino.write(str.encode('d'))
+            #si el objeto esta mas a la izquierda de la posicion central y el ancho de la imagen se mueve a la derecha
+            elif posicion_pingpong[1] < (centrar_imagen_x - (imagen_ancho/3)):
+                print("Gira izquierda")
+                arduino.write(str.encode('i'))
+            #si la pelota esta en centro, avanza directamente hasta su tamaño ideal para usar las pinzas
+            else:
+                print("al frente")
+                arduino.write(str.encode('a'))
+        #si el objeto no es suficiente grande, va a buscar otro que cumpla con las condiciones minimas, esto es para evitar "ruido"
+        elif (posicion_pingpong[0] < area_minima):
+            print("Objeto pequeño, buscando")
+            arduino.write(str.encode('a'))
+        #si el objeto es muy grande se detiene para no chocar o dañar el vehiculo
+        else:
+            print("Objeto grande, paro")
+            arduino.write(str.encode('p'))
+    #si no encuentra nada, gira para buscar otro objeto
+    else:
+        print("Girando para buscar otro elemento.")
+        arduino.write(str.encode('a'))
+        arduino.write(str.encode('d'))
+ 
+    areaCaptura.truncate(0)
