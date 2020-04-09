@@ -4,29 +4,36 @@ int IN1 = 9;
 int IN2 = 8;
 int ENA = 10;
 int ENB = 5;
-int IN3 = 7;
-int IN4 = 6;
-
-// Definicion de el valor del sensor
+int IN3 = 6;
+int IN4 = 7; 
+//sensor
 int hayobs = HIGH;
-const int ProxSensor=3;
-
-// Definición de los comandos del servo
+const int ProxSensor=3; //Declaring where the Out pin from the sensor is wired
+//Motor Servo
 Servo servoMotor;
+
+/*  NOTA
+El servomotor no fue utilizado debido a que debido a una mala conexion este dejo de funcionar.
+Se adapto el vehiculo para su funcionamiento sin el servomotor. 
+
+*/
+
+
 void setup() {
+  // put your setup code here, to run once:
   pinMode(IN1, OUTPUT);
   pinMode(IN2, OUTPUT);
   pinMode(ENA, OUTPUT);
   pinMode(ENB, OUTPUT);
   pinMode(IN3, OUTPUT);
   pinMode(IN4, OUTPUT);
-  pinMode(13, OUTPUT);     
-  pinMode(ProxSensor,INPUT); 
+  pinMode(13, OUTPUT);   // setting the pin modes, the "13" stands for the internal Arduino uno internal LED  
+  pinMode(ProxSensor,INPUT); // then we have the out pin from the module
   Serial.begin(9600);
-  servoMotor.attach(11); 
+  //servoMotor.attach(12); //declaracion
+
 };
 
-// funcion encargada de imprimir si se el sensor dectectó un objeto o no
 void sensorled(){
   hayobs = digitalRead(ProxSensor);
   if(hayobs == LOW){
@@ -36,7 +43,6 @@ void sensorled(){
   }
 }
 
-// funcion encargada de ordenar al auto moverse hacia adelante
 void adelante(){
   //Direccion motor A
  digitalWrite (IN1, HIGH);
@@ -45,33 +51,28 @@ void adelante(){
  //Direccion motor B
  digitalWrite (IN3, HIGH);
  digitalWrite (IN4, LOW);
- analogWrite (ENB, 200); //Velocidad motor B
+ analogWrite (ENB, 180); //Velocidad motor B
 }
 
-// funcion encargada de ordenar al auto moverse hacia atrás
 void atras ()
 {
  //Direccion motor A
  digitalWrite (IN1, LOW);
  digitalWrite (IN2, HIGH);
- analogWrite (ENA, 150); //Velocidad motor A
+ analogWrite (ENA, 170); //Velocidad motor A
  //Direccion motor B
  digitalWrite (IN3, LOW);
  digitalWrite (IN4, HIGH);
- analogWrite (ENB, 150); //Velocidad motor B
+ analogWrite (ENB, 180); //Velocidad motor B
 }
 
-// funcion encargada de ordenar al auto que abra la pinza
 void abrirPinza(){
   servoMotor.write(80);
 }
 
-// funcion encargada de ordenar al auto que cierre la pinza
 void cerrarPinza(){
   servoMotor.write(112);
 }
-
-// funcion encargada de ordenar al auto que se detenga
 void parar ()
 {
  //Direccion motor A
@@ -81,10 +82,10 @@ void parar ()
  //Direccion motor B
  digitalWrite (IN3, LOW);
  digitalWrite (IN4, LOW);
- analogWrite (ENB, 0); //Velocidad motor B
+ analogWrite (ENB, 0); //Velocidad motor A
 }
 
-// funcion encargada de ordenar al auto que gire a la derecha
+
 void derecha ()
 {
  //Direccion motor A
@@ -94,37 +95,36 @@ void derecha ()
  //Direccion motor B
  digitalWrite (IN3, LOW);
  digitalWrite (IN4, HIGH);
- analogWrite (ENB, 100); //Velocidad motor B
+ analogWrite (ENB, 170); //Velocidad motor A
 }
 
-// funcion encargada de ordenar al auto moverse a la izquierda
 void izquierda ()
 {
  //Direccion motor A
  digitalWrite (IN1, LOW);
  digitalWrite (IN2, HIGH);
- analogWrite (ENA, 50); //Velocidad motor A
+ analogWrite (ENA, 200); //Velocidad motor A
  //Direccion motor B
  digitalWrite (IN3, HIGH);
  digitalWrite (IN4, LOW);
- analogWrite (ENB, 150); //Velocidad motor B
+ analogWrite (ENB, 200); //Velocidad motor A
 }
 
-// funciona activa que hará que el arduino reciba las órdenes del raspberry,
-// éstas ordenes se guardarán en la variable char c y el arduino evaluará cua de estas ejecutar
 void loop() {
-  hayobs = digitalRead(ProxSensor);
-  if(hayobs == LOW){
-    //Serial.println("Se detectoObjeto");
-    cerrarPinza();    
-  }else{
-    abrirPinza();
-    //Serial.println("No se ha detectado nada");
-  }
+  
   if(Serial.available()){
     char c = Serial.read();
+    
     if(c == 'a'){
-      adelante();     
+      adelante();    
+     hayobs = digitalRead(ProxSensor);
+      if(hayobs == LOW){
+        //Serial.println("Se detectoObjeto");
+        cerrarPinza();    
+      }else{
+        abrirPinza();
+        //Serial.println("No se ha detectado nada");
+      } 
     }else if(c == 'b'){
       atras();
     }else if(c == 'i'){
