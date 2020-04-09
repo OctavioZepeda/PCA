@@ -29,6 +29,7 @@ matiz = 29
 color_minimo = np.array([matiz-10,100,100])
 color_maximo = np.array([matiz+10, 255, 255])
 cont = 0
+
 #mientras este activa la camara, realiza los ciclos
 for frame in camara.capture_continuous(areaCaptura, format="bgr", use_video_port=True):
     image = frame.array
@@ -89,9 +90,15 @@ for frame in camara.capture_continuous(areaCaptura, format="bgr", use_video_port
             time.sleep(0.2)
         #si el objeto es muy grande se detiene para no chocar o dañar el vehiculo
         else:
-            print("Objeto grande, paro")
-            arduino.write(str.encode('p'))
-            time.sleep(0.2)
+            cont+=1
+            if cont == 2:
+                #cambiamos el color para buscar la meta
+                color_minimo = np.array([matiz-10,255,255])
+                color_maximo = np.array([matiz+10, 255, 255])
+            else:
+                print("Objeto grande, paro")
+                arduino.write(str.encode('p'))
+                time.sleep(0.2)
     #si no encuentra nada, gira para buscar otro objeto
     else:
         #print("Gira derecha")
