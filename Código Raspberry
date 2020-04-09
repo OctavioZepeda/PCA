@@ -1,8 +1,9 @@
-# -- coding: utf-8 --
+# -*- coding: utf-8 -*-
 #importamos los paquetes necesarios a utilizar
 from picamera.array import PiRGBArray
 from picamera import PiCamera
 import cv2
+import time
 import numpy as np
 #importamos las librerias para conectar con el arduino Uno
 import serial
@@ -21,12 +22,13 @@ areaCaptura = PiRGBArray(camara, size=(imagen_ancho, imagen_alto))
 #centra la imagen 
 centrar_imagen_x = imagen_ancho / 2
 centrar_imagen_y = imagen_alto / 2
-area_minima = 250
+area_minima = 25  #original 250
 area_maxima = 100000 
-matiz = 40
+matiz = 29
  
 color_minimo = np.array([matiz-10,100,100])
-color_maximo = np.array([matiz+10, 155, 255])
+color_maximo = np.array([matiz+10, 255, 255])
+cont = 0
 #mientras este activa la camara, realiza los ciclos
 for frame in camara.capture_continuous(areaCaptura, format="bgr", use_video_port=True):
     image = frame.array
@@ -48,17 +50,17 @@ for frame in camara.capture_continuous(areaCaptura, format="bgr", use_video_port
         x, y, ancho,alto = cv2.boundingRect(contorno)
         area_encontrada = ancho *alto
         x_centrada = x + (ancho / 2)
-        y_centrada = y + (height / 2)
+        y_centrada = y + (alto/ 2)
         if area_objeto < area_encontrada:
             area_objeto = area_encontrada
             objeto_pos_x = x_centrada
             objeto_pos_y= y_centrada
-            print("Usar brazo")
-            arduino.write(str.encode('b'))
             
+            arduino.write(str.encode('a'))
+            time.sleep(0.2)
     #si el area es menor a 0 busca la posicion de la pelota
     if area_objeto > 0:
-        posicion_pingpong = [area_objeto, objeto_pos_x, objecto_pos_y]
+        posicion_pingpong = [area_objeto, objeto_pos_x, objeto_pos_y]
     #si no, no realiza ni una actividad... para mantener la distancia
     else:
         posicion_pingpong = None
@@ -69,26 +71,35 @@ for frame in camara.capture_continuous(areaCaptura, format="bgr", use_video_port
             if posicion_pingpong[1] > (centrar_imagen_x + (imagen_ancho/3)):
                 print("Gira derecha")
                 arduino.write(str.encode('d'))
+                time.sleep(0.2)
             #si el objeto esta mas a la izquierda de la posicion central y el ancho de la imagen se mueve a la derecha
             elif posicion_pingpong[1] < (centrar_imagen_x - (imagen_ancho/3)):
                 print("Gira izquierda")
                 arduino.write(str.encode('i'))
+                time.sleep(0.2)
             #si la pelota esta en centro, avanza directamente hasta su tamaño ideal para usar las pinzas
             else:
                 print("al frente")
                 arduino.write(str.encode('a'))
+                time.sleep(0.2)
         #si el objeto no es suficiente grande, va a buscar otro que cumpla con las condiciones minimas, esto es para evitar "ruido"
         elif (posicion_pingpong[0] < area_minima):
             print("Objeto pequeño, buscando")
             arduino.write(str.encode('a'))
+            time.sleep(0.2)
         #si el objeto es muy grande se detiene para no chocar o dañar el vehiculo
         else:
             print("Objeto grande, paro")
             arduino.write(str.encode('p'))
+            time.sleep(0.2)
     #si no encuentra nada, gira para buscar otro objeto
     else:
-        print("Girando para buscar otro elemento.")
-        arduino.write(str.encode('a'))
+        #print("Gira derecha")
+        #giramos en sentido del reloj para buscar nuevos objetivos.
         arduino.write(str.encode('d'))
- 
+        time.sleep(0.2)
+        arduino.write(str.encode('p'))
+        time.sleep(0.2)
+        
     areaCaptura.truncate(0)
+#     
